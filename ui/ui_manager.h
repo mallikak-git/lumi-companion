@@ -22,6 +22,7 @@ enum class LumiFaceState {
 struct EduItem {
     const char* category;
     const char* title;
+    const char* imagePath;
     const char* body;
     const char* quizQ;
     const char* optA;
@@ -36,19 +37,13 @@ public:
     void handleInput(KeyCode key);
     void updateAnimation();
 
-    // Mode and Screen controls
     void setScreenState(ScreenState state);
     void setLumiFace(LumiFaceState face);
-    void setContent(const String& title, const String& body);
+    void setContent(const String& title, const String& body, const String& imagePath = "");
     void setQuiz(const String& question, const String& optA, const String& optB);
 
-    // Audio / Voice state integration
-    void startListening();
-    void stopListening();
-    bool isListening() const { return listeningActive; }
-
-    // Offline content browsing
     void nextContentItem();
+    void prevContentItem();
 
 private:
     TFT_eSPI tft;
@@ -56,16 +51,15 @@ private:
     LumiFaceState currentFace;
     unsigned long lastAnimUpdate;
     int animFrame;
-    bool listeningActive;
 
     String currentTitle;
     String currentBody;
+    String currentImagePath;
     String quizOptA;
     String quizOptB;
     uint8_t currentCorrectOpt;
     uint8_t currentContentIndex;
 
-    // Drawing primitives
     void renderHomeScreen();
     void renderLearningScreen();
     void renderQuizScreen();
@@ -73,7 +67,8 @@ private:
     void renderSettingsScreen();
     void renderProgressScreen();
     void renderHeader(const char* title);
-    void renderStatusBar(int batteryPct, bool micActive);
+    void renderStatusBar(int batteryPct);
     void drawLumiFace(int x, int y, LumiFaceState state, int frame);
+    void drawItemImage(int x, int y, int w, int h, const char* category, const char* path);
     void loadOfflineItem(uint8_t index);
 };
