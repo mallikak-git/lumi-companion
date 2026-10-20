@@ -22,6 +22,7 @@ enum class LumiFaceState {
 struct EduItem {
     const char* category;
     const char* title;
+    const char* imagePath; // Path on MicroSD card (e.g. "/images/elephant.bmp")
     const char* body;
     const char* quizQ;
     const char* optA;
@@ -39,7 +40,7 @@ public:
     // Mode and Screen controls
     void setScreenState(ScreenState state);
     void setLumiFace(LumiFaceState face);
-    void setContent(const String& title, const String& body);
+    void setContent(const String& title, const String& body, const String& imagePath = "");
     void setQuiz(const String& question, const String& optA, const String& optB);
 
     // Audio / Voice state integration
@@ -60,6 +61,7 @@ private:
 
     String currentTitle;
     String currentBody;
+    String currentImagePath;
     String quizOptA;
     String quizOptB;
     uint8_t currentCorrectOpt;
@@ -75,5 +77,6 @@ private:
     void renderHeader(const char* title);
     void renderStatusBar(int batteryPct, bool micActive);
     void drawLumiFace(int x, int y, LumiFaceState state, int frame);
+    void drawItemImage(int x, int y, int w, int h, const char* category, const char* path);
     void loadOfflineItem(uint8_t index);
 };

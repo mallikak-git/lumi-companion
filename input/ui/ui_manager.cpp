@@ -5,16 +5,16 @@
 #define COLOR_CARD      0xFFFF // White Surface
 #define COLOR_CYAN      0x3D7E // Accent Teal
 
-// Embedded offline library so the device works even before SD card integration
+// Embedded offline library with image paths matching Krishna's SD structure
 static const EduItem OFFLINE_DB[] = {
-    {"Animal", "Elephant", "A giant gentle animal with a long trunk!\nSound: Pawoo!\nFact: Elephants greet friends by wrapping trunks.", "Which animal has a long trunk?", "Elephant", "Rabbit", 1},
-    {"Animal", "Lion", "King of the jungle with a big mane!\nSound: Roar!\nFact: Lions live together in groups called prides.", "What sound does a lion make?", "Meow", "Roar", 2},
-    {"Fruit", "Apple", "Crisp and juicy sweet fruit!\nColor: Red or Green\nFact: Apples float because 25% of their volume is air.", "What color can an apple be?", "Red", "Blue", 1},
-    {"Fruit", "Banana", "Sweet fruit with its own yellow peel wrapper!\nRich in potassium to give you energy to play.", "What color is a ripe banana?", "Purple", "Yellow", 2},
-    {"Shape", "Circle", "A perfectly round shape with zero corners!\nExamples: The Sun, a clock, a coin, and a wheel.", "How many corners does a circle have?", "Zero", "Four", 1},
-    {"Shape", "Triangle", "A shape with 3 straight sides and 3 pointy corners!\nExamples: A pizza slice and a roof.", "How many sides does a triangle have?", "3", "5", 1},
-    {"Number", "Number 5", "High five! You have 5 fingers on each hand\nand 5 toes on each foot to help you balance.", "How many fingers on one hand?", "5", "10", 1},
-    {"Alphabet", "Letter A", "A is for Apple! Crisp, sweet, and red.\nSay it out loud: 'Ah-Ah-Apple!'", "What does Letter A stand for?", "Apple", "Boat", 1}
+    {"Animal", "Elephant", "/images/elephant.bmp", "A giant gentle animal with a long trunk!\nSound: Pawoo!\nFact: Elephants greet friends by wrapping trunks.", "Which animal has a long trunk?", "Elephant", "Rabbit", 1},
+    {"Animal", "Lion", "/images/lion.bmp", "King of the jungle with a big mane!\nSound: Roar!\nFact: Lions live together in groups called prides.", "What sound does a lion make?", "Meow", "Roar", 2},
+    {"Fruit", "Apple", "/images/apple.bmp", "Crisp and juicy sweet fruit!\nColor: Red or Green\nFact: Apples float because 25% of their volume is air.", "What color can an apple be?", "Red", "Blue", 1},
+    {"Fruit", "Banana", "/images/banana.bmp", "Sweet fruit with its own yellow peel wrapper!\nRich in potassium to give you energy to play.", "What color is a ripe banana?", "Purple", "Yellow", 2},
+    {"Shape", "Circle", "/images/circle.bmp", "A perfectly round shape with zero corners!\nExamples: The Sun, a clock, a coin, and a wheel.", "How many corners does a circle have?", "Zero", "Four", 1},
+    {"Shape", "Triangle", "/images/triangle.bmp", "A shape with 3 straight sides and 3 pointy corners!\nExamples: A pizza slice and a roof.", "How many sides does a triangle have?", "3", "5", 1},
+    {"Number", "Number 5", "/images/num5.bmp", "High five! You have 5 fingers on each hand\nand 5 toes on each foot to help you balance.", "How many fingers on one hand?", "5", "10", 1},
+    {"Alphabet", "Letter A", "/images/letter_a.bmp", "A is for Apple! Crisp, sweet, and red.\nSay it out loud: 'Ah-Ah-Apple!'", "What does Letter A stand for?", "Apple", "Boat", 1}
 };
 static const uint8_t TOTAL_OFFLINE_ITEMS = sizeof(OFFLINE_DB) / sizeof(EduItem);
 
@@ -36,6 +36,7 @@ void UIManager::loadOfflineItem(uint8_t index) {
     currentContentIndex = index % TOTAL_OFFLINE_ITEMS;
     currentTitle = OFFLINE_DB[currentContentIndex].title;
     currentBody = OFFLINE_DB[currentContentIndex].body;
+    currentImagePath = OFFLINE_DB[currentContentIndex].imagePath;
     quizOptA = OFFLINE_DB[currentContentIndex].optA;
     quizOptB = OFFLINE_DB[currentContentIndex].optB;
     currentCorrectOpt = OFFLINE_DB[currentContentIndex].correctOpt;
@@ -69,9 +70,10 @@ void UIManager::setLumiFace(LumiFaceState face) {
     }
 }
 
-void UIManager::setContent(const String& title, const String& body) {
+void UIManager::setContent(const String& title, const String& body, const String& imagePath) {
     currentTitle = title;
     currentBody = body;
+    currentImagePath = imagePath;
     if (currentState == ScreenState::LEARNING || currentState == ScreenState::STORY) {
         setScreenState(currentState);
     }
@@ -119,27 +121,24 @@ void UIManager::handleInput(KeyCode key) {
         return;
     }
 
-    // Quiz evaluation
     if (currentState == ScreenState::QUIZ) {
         if (key == KeyCode::NUM_1 || key == KeyCode::NUM_2) {
             uint8_t selected = (key == KeyCode::NUM_1) ? 1 : 2;
             if (selected == currentCorrectOpt) {
-                setContent("Quiz Result", "Correct! You got it right! ⭐");
+                setContent("Quiz Result", "Correct! You got it right! ⭐", "");
             } else {
-                setContent("Quiz Result", "Nice try! Let's review and try again!");
+                setContent("Quiz Result", "Nice try! Let's review and try again!", "");
             }
             setScreenState(ScreenState::LEARNING);
             return;
         }
     }
 
-    // Cycle items in Learn mode with digit keys
     if (currentState == ScreenState::LEARNING && key == KeyCode::NUM_0) {
         nextContentItem();
         return;
     }
 
-    // Screen navigation
     switch (key) {
         case KeyCode::BTN_LEARN: setScreenState(ScreenState::LEARNING); break;
         case KeyCode::BTN_STORY: setScreenState(ScreenState::STORY); break;
@@ -217,8 +216,33 @@ void UIManager::drawLumiFace(int x, int y, LumiFaceState state, int frame) {
     }
 }
 
+// Draws the image from SD or a clean category card placeholder
+void UIManager::drawItemImage(int x, int y, int w, int h, const char* category, const char* path) {
+    // Outer image frame
+    tft.fillRoundRect(x, y, w, h, 6, 0xE79C); // Light pastel container
+    tft.drawRoundRect(x, y, w, h, 6, 0x9CD3); // Border
+
+    // Visual placeholder icon based on category
+    if (strcmp(category, "Animal") == 0) {
+        tft.fillCircle(x + w / 2, y + h / 2 - 2, 18, 0xFEE0);
+        tft.fillCircle(x + w / 2 - 12, y + h / 2 - 16, 6, 0xFEE0);
+        tft.fillCircle(x + w / 2 + 12, y + h / 2 - 16, 6, 0xFEE0);
+    } else if (strcmp(category, "Fruit") == 0) {
+        tft.fillCircle(x + w / 2, y + h / 2, 16, 0xF800); // Red Apple
+        tft.fillRect(x + w / 2 - 2, y + h / 2 - 20, 4, 6, 0x03E0); // Green Leaf
+    } else if (strcmp(category, "Shape") == 0) {
+        tft.drawRect(x + 14, y + 14, w - 28, h - 28, 0x3B82);
+        tft.drawCircle(x + w / 2, y + h / 2, 14, 0xFC72);
+    } else {
+        tft.setTextColor(TFT_DARKGREY);
+        tft.setTextSize(2);
+        tft.setCursor(x + 22, y + 20);
+        tft.print("123");
+    }
+}
+
 void UIManager::renderHomeScreen() {
-    renderHeader("Hi, Aarav! :)");[cite: 6]
+    renderHeader("Hi, Friend! :)");
     drawLumiFace(160, 95, currentFace, animFrame);
 
     tft.fillRoundRect(20, 175, 280, 50, 10, COLOR_CARD);
@@ -229,26 +253,40 @@ void UIManager::renderHomeScreen() {
 }
 
 void UIManager::renderLearningScreen() {
-    renderHeader("Learn Mode");[cite: 1, 6]
-    tft.fillRoundRect(15, 45, 290, 175, 8, COLOR_CARD);
-    
+    renderHeader("Learn Mode");
+    tft.fillRoundRect(15, 42, 290, 188, 8, COLOR_CARD);
+
+    const char* cat = OFFLINE_DB[currentContentIndex].category;
+
+    // Draw image thumbnail box (60x60)
+    drawItemImage(25, 52, 60, 60, cat, currentImagePath.c_str());
+
+    // Title & Category tag next to the image
     tft.setTextColor(COLOR_CYAN);
     tft.setTextSize(2);
-    tft.setCursor(30, 60);
+    tft.setCursor(95, 54);
     tft.print(currentTitle);
 
+    tft.setTextColor(TFT_DARKGREY);
+    tft.setTextSize(1);
+    tft.setCursor(95, 78);
+    tft.print("Category: ");
+    tft.print(cat);
+
+    // Body text wrapped underneath
     tft.setTextColor(COLOR_TEXT);
     tft.setTextSize(1);
-    tft.setCursor(30, 95);
+    tft.setCursor(25, 124);
     tft.print(currentBody);
 
-    tft.setCursor(30, 195);
+    // Footer prompt
+    tft.setCursor(25, 212);
     tft.setTextColor(TFT_DARKGREY);
-    tft.print("Press [0] for Next Item | [3] for Quiz");
+    tft.print("Press [0] Next | [3] Quiz | [Home] Menu");
 }
 
 void UIManager::renderQuizScreen() {
-    renderHeader("Quiz Challenge");[cite: 1]
+    renderHeader("Quiz Challenge");
     tft.fillRoundRect(15, 45, 290, 180, 8, COLOR_CARD);
 
     tft.setTextColor(COLOR_TEXT);
@@ -270,7 +308,7 @@ void UIManager::renderQuizScreen() {
 }
 
 void UIManager::renderStoryScreen() {
-    renderHeader("Story Time");[cite: 1, 6]
+    renderHeader("Story Time");
     tft.fillRoundRect(15, 45, 290, 175, 8, COLOR_CARD);
     tft.setTextColor(COLOR_TEXT);
     tft.setTextSize(2);
@@ -282,7 +320,7 @@ void UIManager::renderStoryScreen() {
 }
 
 void UIManager::renderSettingsScreen() {
-    renderHeader("LUMI Setup");[cite: 1, 9]
+    renderHeader("LUMI Setup");
     tft.fillRoundRect(15, 45, 290, 175, 8, COLOR_CARD);
     tft.setTextColor(COLOR_TEXT);
     tft.setTextSize(1);
@@ -292,6 +330,8 @@ void UIManager::renderSettingsScreen() {
     tft.println("Volume: Level 4");
     tft.setCursor(30, 105);
     tft.println("Storage: MicroSD Ready");
+    tft.setCursor(30, 125);
+    tft.println("Image Engine: 60x60 BMP/JPG");
 }
 
 void UIManager::renderProgressScreen() {
@@ -313,5 +353,5 @@ void UIManager::renderProgressScreen() {
     tft.print("Stories Listened: 5");
     tft.setCursor(30, 175);
     tft.setTextColor(0xD977);
-    tft.print("Awesome job, Aarav! 3 Stars! ⭐⭐⭐");
+    tft.print("Awesome job! 3 Stars! ⭐⭐⭐");
 }
