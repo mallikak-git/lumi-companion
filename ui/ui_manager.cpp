@@ -218,7 +218,7 @@ void UIManager::drawLumiFace(int x, int y, LumiFaceState state, int frame) {
 }
 
 void UIManager::renderHomeScreen() {
-    renderHeader("Hi, Aarav! :)");[cite: 6]
+    renderHeader("Hi, Friend! :)");[cite: 6]
     drawLumiFace(160, 95, currentFace, animFrame);
 
     tft.fillRoundRect(20, 175, 280, 50, 10, COLOR_CARD);
